@@ -214,6 +214,14 @@ public sealed partial class ProfilesViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private void Revert() => Load(null);
 
+    /// <summary>Only a click changes the fan mode; see the note on the radio buttons in ProfilesPage.xaml.</summary>
+    [RelayCommand]
+    private void SetFanMode(string mode)
+    {
+        if (Selected is { } item)
+            item.FanCustom = mode == "Custom";
+    }
+
     [RelayCommand]
     private void ApplyPreset(string name)
     {

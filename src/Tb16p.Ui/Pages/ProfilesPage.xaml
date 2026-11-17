@@ -244,9 +244,14 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal">
+                            <!-- One-way on purpose: with two-way bindings, a radio group unchecking itself while the
+                                 selected profile changes wrote "EC auto" into the next profile and wiped its curve. -->
                             <RadioButton Content="{loc:Tr Fan_Mode_Ec}" GroupName="FanMode" Margin="0,0,24,0"
-                                         IsChecked="{Binding FanCustom, Converter={StaticResource InverseBool}}" />
-                            <RadioButton Content="{loc:Tr Fan_Mode_Custom}" GroupName="FanMode" IsChecked="{Binding FanCustom}" />
+                                         IsChecked="{Binding FanCustom, Mode=OneWay, Converter={StaticResource InverseBool}}"
+                                         Command="{Binding DataContext.SetFanModeCommand, ElementName=Root}" CommandParameter="Ec" />
+                            <RadioButton Content="{loc:Tr Fan_Mode_Custom}" GroupName="FanMode"
+                                         IsChecked="{Binding FanCustom, Mode=OneWay}"
+                                         Command="{Binding DataContext.SetFanModeCommand, ElementName=Root}" CommandParameter="Custom" />
                         </StackPanel>
 
                         <Grid Grid.Row="1" Margin="0,10,0,8" DataContext="{Binding DataContext, ElementName=Root}">
