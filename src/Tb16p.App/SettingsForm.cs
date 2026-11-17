@@ -32,6 +32,7 @@ public sealed class SettingsForm : Form
     private readonly NumericUpDown _limitsInterval = new() { Minimum = 1, Maximum = 60, Width = 60 };
     private readonly NumericUpDown _coInterval = new() { Minimum = 5, Maximum = 600, Width = 60 };
     private readonly CheckBox _startup = new() { Text = "Chạy cùng Windows", AutoSize = true };
+    private readonly CheckBox _sensorLog = new() { Text = "Ghi nhật ký cảm biến (nhiệt độ + RPM mỗi 2 giây)", AutoSize = true };
 
     private readonly Label _status = new() { AutoSize = true, Padding = new Padding(4) };
     private readonly Label _sensors = new() { AutoSize = true, Padding = new Padding(4) };
@@ -230,6 +231,10 @@ public sealed class SettingsForm : Form
         AddRow(0, 2, "Ghi lại giới hạn mỗi (giây)", _limitsInterval);
         AddRow(1, 2, "Ghi lại Curve Optimizer mỗi (giây)", _coInterval);
         grid.Controls.Add(_startup, 3, 2);
+        grid.Controls.Add(_sensorLog, 0, 3);
+        grid.SetColumnSpan(_sensorLog, 2);
+        grid.Controls.Add(SmallButton("Mở thư mục dữ liệu", TrayApp.OpenDataFolder), 3, 3);
+        _sensorLog.CheckedChanged += (_, _) => { if (!_loading) { _draft.SensorLogEnabled = _sensorLog.Checked; MarkDirty(); } };
 
         _acProfile.SelectedIndexChanged += (_, _) => { if (!_loading && _acProfile.SelectedItem is string s) { _draft.AcProfile = s; MarkDirty(); } };
         _batteryProfile.SelectedIndexChanged += (_, _) => { if (!_loading && _batteryProfile.SelectedItem is string s) { _draft.BatteryProfile = s; MarkDirty(); } };
@@ -265,6 +270,7 @@ public sealed class SettingsForm : Form
             _limitsInterval.Value = Math.Clamp(_draft.ReapplyLimitsSeconds, 1, 60);
             _coInterval.Value = Math.Clamp(_draft.ReapplyCurveOptimizerSeconds, 5, 600);
             try { _startup.Checked = StartupTask.IsEnabled(); } catch { _startup.Checked = false; }
+            _sensorLog.Checked = _draft.SensorLogEnabled;
 
             var index = previous is null ? -1 : _profiles.Items.IndexOf(previous);
             _profiles.SelectedIndex = index >= 0 ? index : _profiles.Items.Count > 0 ? 0 : -1;
@@ -512,7 +518,8 @@ public sealed class SettingsForm : Form
         try
         {
             var r = await Task.Run(_gameZone.Read);
-            _sensors.Text = $"  |  CPU {Show(r.CpuTempC, "°C")}  •  Quạt 1 {Show(r.Fan1Rpm, " rpm")}  •  Quạt 2 {Show(r.Fan2Rpm, " rpm")}";
+            _sensors.Text = $"  |  CPU {Show(r.CpuC, "°C")}  •  CB1 {Show(r.Sensor1C, "°C")}  •  CB5 {Show(r.Sensor5C, "°C")}"
+                + $"  •  Quạt 1 {Show(r.Fan1Rpm, " rpm")}  •  Quạt 2 {Show(r.Fan2Rpm, " rpm")}";
         }
         finally
         {

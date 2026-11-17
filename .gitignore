@@ -13,3 +13,11 @@ tests/**/*report*.txt
 vendor/ryzenadj-*/
 vendor/*.zip
 reference/
+
+# Firmware ACPI dumps belong to Lenovo; keep them local
+research/acpi/
+
+# Downloaded third-party tools
+tools/
+research/dsl/
+research/ec-fields.csv

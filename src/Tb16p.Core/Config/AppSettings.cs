@@ -52,6 +52,9 @@ public sealed class AppSettings
     /// <summary>Charge mode enforced at startup and checked periodically; null = do not manage.</summary>
     public ChargeMode? ChargeMode { get; set; }
 
+    /// <summary>Writes EC temperatures and fan speeds to a daily CSV, to learn the stock fan curve.</summary>
+    public bool SensorLogEnabled { get; set; }
+
     /// <summary>How often power limits are re-sent, because the EC silently restores its own.</summary>
     public int ReapplyLimitsSeconds { get; set; } = 2;
 

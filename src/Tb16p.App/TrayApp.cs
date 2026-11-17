@@ -15,11 +15,13 @@ public sealed class TrayApp : ApplicationContext
     private readonly SynchronizationContext _ui;
     private Icon? _currentIcon;
     private SettingsForm? _settingsForm;
+    private readonly SensorLogger _sensorLogger;
 
     public TrayApp(AppSettings settings)
     {
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _engine = new TuningEngine(settings);
+        _sensorLogger = new SensorLogger(_engine);
         _tray = new NotifyIcon { Visible = true, ContextMenuStrip = new ContextMenuStrip() };
         _tray.ContextMenuStrip.Opening += (_, _) => BuildMenu();
         _tray.MouseClick += (_, e) =>
@@ -69,11 +71,19 @@ public sealed class TrayApp : ApplicationContext
         menu.Items.Add("Áp lại ngay", null, (_, _) => _engine.RequestFullApply());
         menu.Items.Add(new ToolStripMenuItem("Tạm dừng", null, (_, _) => _engine.SetPaused(!_engine.Paused)) { Checked = _engine.Paused });
         menu.Items.Add(StartupMenuItem());
+        menu.Items.Add(new ToolStripMenuItem("Ghi nhật ký cảm biến", null, (_, _) =>
+        {
+            settings.SensorLogEnabled = !settings.SensorLogEnabled;
+            Log.Info($"Sensor log: {settings.SensorLogEnabled}");
+            SaveAndApply();
+        })
+        { Checked = settings.SensorLogEnabled });
         menu.Items.Add(new ToolStripSeparator());
 
         menu.Items.Add("Sửa cài đặt (settings.json)", null, (_, _) => OpenInNotepad(AppSettings.FilePath));
         menu.Items.Add("Tải lại cài đặt", null, (_, _) => ReloadSettings());
         menu.Items.Add("Xem nhật ký", null, (_, _) => OpenInNotepad(Log.FilePath));
+        menu.Items.Add("Mở thư mục dữ liệu", null, (_, _) => OpenDataFolder());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Thoát", null, (_, _) => ExitThreadCore());
     }
@@ -172,6 +182,12 @@ public sealed class TrayApp : ApplicationContext
             Process.Start(new ProcessStartInfo("notepad.exe", $"\"{path}\"") { UseShellExecute = true });
     }
 
+    public static void OpenDataFolder()
+    {
+        Directory.CreateDirectory(AppSettings.Directory);
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppSettings.Directory}\"") { UseShellExecute = true });
+    }
+
     private static void ShowError(string message) =>
         MessageBox.Show(message, "Thinkbook16PController", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
@@ -225,6 +241,7 @@ public sealed class TrayApp : ApplicationContext
         Log.Info("Exit");
         _settingsForm?.Close();
         _tray.Visible = false;
+        _sensorLogger.Dispose();
         _engine.Dispose();
         _tray.Dispose();
         _currentIcon?.Dispose();
