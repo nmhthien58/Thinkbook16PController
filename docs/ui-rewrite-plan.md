@@ -62,8 +62,12 @@ Trạng thái: **đã chốt, chưa bắt đầu** (2026-11-17).
 7. Trang Support (chờ QR / link).
 8. `publish.ps1` trỏ sang dự án mới, test toàn bộ trên máy, xóa `src/Tb16p.App`, cập nhật README (ảnh chụp màn hình, mục Ủng hộ), thêm `.github/FUNDING.yml`.
 
+## Thông tin ủng hộ (đã có)
+
+- VietQR (Vietcombank): `assets/support/vietqr.png`
+- PayPal: https://paypal.me/nmhthien (nút Donate của PayPal không mở cho tài khoản Việt Nam, dùng PayPal.Me)
+
 ## Cần chủ dự án cung cấp
 
-- Ảnh mã QR (VietQR / MoMo) và các link donate muốn hiện.
 - Quyết định tên app (giữ "Thinkbook16PController" hay đổi tên riêng, tránh thương hiệu Lenovo khi nhận donate).
 - (Tùy chọn) icon app.
