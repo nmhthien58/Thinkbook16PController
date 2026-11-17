@@ -9,5 +9,7 @@ public partial class ProfilesPage : Page
     {
         DataContext = viewModel;
         InitializeComponent();
+        // The page instance is reused; Loaded runs every time it is navigated to.
+        Loaded += (_, _) => viewModel.SelectActive();
     }
 }

@@ -52,9 +52,23 @@ public sealed partial class ProfilesViewModel : ObservableObject
     }
 
     public ObservableCollection<ProfileItem> Items { get; } = [];
-    public string FanHint => Loc.F("Fan_Hint", FanCurve.EmergencyTempC);    private void Load(string? select)
+    public string FanHint => Loc.F("Fan_Hint", FanCurve.EmergencyTempC);    /// <summary>
+    /// Points the list at the profile running now (the first one if none), each time the page is
+    /// opened. Left alone while there are unsaved edits, so the user stays where they were editing.
+    /// </summary>
+    public void SelectActive()
     {
-        var previous = select ?? Selected?.Name;
+        if (IsDirty)
+            return;
+        Selected = ActiveItem() ?? Items.FirstOrDefault();
+    }
+
+    private ProfileItem? ActiveItem() =>
+        _app.Engine.ActiveProfile is { } active ? ItemFor(active.Name) : null;
+
+    private void Load(string? select)
+    {
+        var previous = select ?? Selected?.Name ?? (_app.Engine.ActiveProfile?.Name);
         Items.Clear();
         foreach (var p in _app.Settings.Clone().Profiles)
             Items.Add(new ProfileItem(p, p.Name, MarkDirty));
