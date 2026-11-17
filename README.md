@@ -1,67 +1,93 @@
-# Thinkbook16PController
+# TB16P Tuner
 
-Công cụ chỉnh giới hạn điện, Curve Optimizer và chế độ sạc pin cho **Lenovo ThinkBook 16p G6 ADR (21U0, Ryzen 9 8945HX)**, bản nội địa Trung Quốc không có phần mềm tinh chỉnh của Lenovo.
+**Power, fan & battery tuner for Lenovo ThinkBook 16p.**
 
-> ⚠️ Chỉ dành cho CPU **AMD Dragon Range** (family 19h model 61h). App tự kiểm tra và từ chối chạy trên CPU khác. Dùng với rủi ro của bạn.
+Power limits, per-core Curve Optimizer, custom fan curves and battery charge modes for the **ThinkBook 16p G6 ADR (21U0, Ryzen 9 8945HX)**, the China-market model that ships without Lenovo's tuning software. English and Vietnamese UI, light and dark theme.
 
-## Vì sao cần
+> ⚠️ Only for **AMD Dragon Range** CPUs (family 19h model 61h). The app checks the CPU and refuses to tune anything else. Changing power limits, voltages and fan speeds is at your own risk.
 
-- Các mode Fn+Q chỉ có Eco / tự điều chỉnh / Performance. Performance đẩy CPU lên 9x °C.
-- Giới hạn đặt bằng UXTU (RyzenAdj) bị **EC của máy âm thầm ghi đè** về bảng giới hạn của firmware sau vài phút.
-- Rút sạc thì mất cả giới hạn lẫn Curve Optimizer.
-- Rút cáp pin (khi vệ sinh máy) thì Conservation mode bị tắt.
+![General page](docs/screenshots/general.png)
 
-## Tính năng
+## Why
 
-- Profile gồm STAPM / Fast / Slow / ngưỡng nhiệt CPU và Curve Optimizer từng nhân (2 CCD × 8 nhân).
-- Tự đổi profile khi cắm hoặc rút sạc, áp lại sau khi máy thức dậy từ sleep.
-- Ghi lại giới hạn mỗi vài giây (mặc định 2 s), Curve Optimizer mỗi 30 s. Bảng PM của Dragon Range không đọc được nên app không phát hiện được lúc EC ghi đè, vì vậy ghi lại theo chu kỳ.
-- Chế độ sạc Conservation / Normal / Rapid Charge, tự bật lại nếu bị tắt.
-- Cửa sổ quản lý (chuột trái vào biểu tượng khay) hiển thị nhiệt độ CPU và tốc độ 2 quạt.
-- Chạy cùng Windows qua Task Scheduler với quyền cao nhất, không hiện UAC mỗi lần bật máy.
+- Fn+Q only offers Eco / Auto / Performance, and Performance pushes the CPU into the 90s °C.
+- Limits set with UXTU (RyzenAdj) are **silently overwritten by the EC** with the firmware's own table after a few minutes.
+- Unplugging the charger drops both the limits and Curve Optimizer.
+- Disconnecting the battery (e.g. when cleaning the laptop) turns Conservation mode off.
+- The fans cannot be tuned at all: Lenovo Legion Toolkit does not support this ThinkBook.
 
-Chưa có: chỉnh đường cong quạt. Trên máy này `Fan_Set_Table` của GameZone nhận lệnh nhưng không có tác dụng (xem phần Ghi chú kỹ thuật).
+## Features
 
-## Cài đặt
+- **Profiles** with STAPM / Fast / Slow power limits, a CPU temperature limit and **per-core Curve Optimizer** (2 CCDs × 8 cores, one value per CCD or per core).
+- **Automatic profile switching** when the charger is plugged in or unplugged, and re-apply after resume from sleep.
+- **Defeats the EC override**: limits are re-sent every few seconds (2 s by default), Curve Optimizer every 30 s. The Dragon Range PM table cannot be read, so the app cannot detect the override and simply re-sends on a timer.
+- **Custom fan curves** per profile: drag points freely (any temperature, not fixed steps), double-click to add, right-click to remove. Includes a **"Lenovo stock (measured)"** preset reconstructed from real EC behaviour ([how](docs/stock-fan-curve.md)), plus Quiet / Balanced / Cool. Safety: full speed from 95 °C, fans handed back to the EC on exit, pause, sleep or a crash.
+- **Battery charge mode**: Conservation / Normal / Rapid Charge, re-enabled automatically if something turns it off.
+- Live status: CPU and EC temperatures, both fan speeds, the active profile and errors.
+- Tray icon, start with Windows through Task Scheduler (admin rights without a UAC prompt on every boot), optional sensor log to CSV.
 
-Yêu cầu: Windows 10/11 x64, .NET 8 SDK.
-
-1. Thêm thư mục project vào **Windows Security → Virus & threat protection → Exclusions**. Defender chặn driver WinRing0 nếu không làm bước này.
-2. Thoát UXTU / Lenovo Legion Toolkit (và tắt chế độ tự khởi động của chúng) để các app không ghi đè lẫn nhau.
-3. Build vào thư mục `app\`:
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\publish.ps1
-   ```
-4. Chạy `app\Thinkbook16PController.exe` (cần quyền admin), rồi bật **Chạy cùng Windows** trong cửa sổ quản lý.
-
-Cài đặt lưu ở `C:\ProgramData\Thinkbook16PController\settings.json`, nhật ký ở `log.txt` cùng thư mục.
-
-Công cụ dòng lệnh để thử nghiệm: `src\Tb16p.Cli` (`tb16p info | limits | co | battery`).
-
-## Cấu trúc
-
-| Thư mục | Nội dung |
+| Fan curve | Power & Curve Optimizer |
 |---|---|
-| `src/Tb16p.Core` | Giao tiếp SMU qua WinRing0, lệnh Dragon Range, Curve Optimizer, chế độ sạc qua `\\.\EnergyDrv`, cảm biến GameZone, cài đặt |
-| `src/Tb16p.App` | App ở khay hệ thống + cửa sổ quản lý (WinForms) |
-| `src/Tb16p.Cli` | Công cụ dòng lệnh để thử nghiệm |
-| `tests/` | Các script PowerShell đã dùng để khảo sát máy |
-| `vendor/WinRing0` | Driver WinRing0 |
+| ![Fan curve](docs/screenshots/fan-curve.png) | ![Power & Curve Optimizer](docs/screenshots/power-co.png) |
 
-## Ghi chú kỹ thuật (ThinkBook 16p G6 ADR)
+## Install
 
-- Mode Fn+Q đi qua ITS/DYTC của Lenovo Dispatcher (`HKLM\SYSTEM\CurrentControlSet\Services\LenovoProcessManagement\Performance\PowerSlider`, `ITS_CurrentSetting`: 0 = auto, 1 = eco, 3 = performance). Dispatcher **không** đặt PLx trên AMD. Thủ phạm ghi đè giới hạn là EC/firmware.
-- BIOS có giao diện GameZone (`ACPI\PNP0C14\GMZN`) giống dòng Legion. Các getter nhiệt độ và quạt hoạt động, nhưng `SetSmartFanMode` / `Fan_Set_Table` không có tác dụng (`Fan_Set_Table` phải nhận đúng 64 byte).
-- Bảng giới hạn firmware (Quiet / Balanced / Performance): dài hạn 55/70/80 W, đỉnh 75/102/155 W, ngưỡng nhiệt 100 °C.
-- RyzenAdj 0.19 crash trên máy này (không đọc được bảng PM của Dragon Range), nên app tự cài giao thức SMU mailbox.
+1. Download **`TB16PTuner-vX.Y.Z-setup.exe`** from [Releases](../../releases) and run it. .NET is built in, nothing else needs installing.
+   A portable `.zip` is there too: unzip anywhere and run `TB16PTuner.exe`.
+2. **Microsoft Defender blocks the WinRing0 driver** the app needs for power limits and Curve Optimizer. Either tick *"Add the install folder to Microsoft Defender exclusions"* in the installer, or add the folder yourself under **Windows Security → Virus & threat protection → Exclusions**. Fan control and charge modes work without it.
+3. Quit UXTU / Lenovo Legion Toolkit (and turn off their auto-start) so the tools do not overwrite each other.
+4. Start TB16P Tuner (it asks for admin rights) and turn on **Settings → Start with Windows**.
 
-## Ghi công
+Windows SmartScreen may warn about an unknown publisher because the app is not code-signed: choose *More info → Run anyway*.
 
-- [Universal x86 Tuning Utility](https://github.com/JamesCJ60/Universal-x86-Tuning-Utility) (GPL-3.0): địa chỉ SMU mailbox, mã lệnh Dragon Range và cách mã hóa Curve Optimizer từng nhân.
-- [RyzenAdj](https://github.com/FlyGoat/RyzenAdj) (LGPL-3.0): giao thức SMU mailbox; bản phân phối WinRing0.
-- [Lenovo Legion Toolkit](https://github.com/BartoszCichecki/LenovoLegionToolkit): IOCTL chế độ sạc pin qua `\\.\EnergyDrv`.
-- WinRing0 / OpenLibSys của hiyohiyo.
+Settings live in `C:\ProgramData\TB16PTuner\settings.json`, the log in `log.txt` next to it.
 
-## Giấy phép
+## Build from source
 
-GPL-3.0, xem [LICENSE](LICENSE).
+Requirements: Windows 10/11 x64, .NET 8 SDK.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish.ps1   # builds .\app\TB16PTuner.exe
+powershell -ExecutionPolicy Bypass -File .\release.ps1   # portable zip + installer (needs Inno Setup 6)
+```
+
+| Folder | Contents |
+|---|---|
+| `src/Tb16p.Core` | SMU mailbox over WinRing0, Dragon Range commands, Curve Optimizer, charge mode via `\\.\EnergyDrv`, GameZone sensors and fans, settings |
+| `src/Tb16p.Service` | Tuning engine (re-apply loop, fan control), sensor logger, logon task |
+| `src/Tb16p.Ui` | WPF app (WPF-UI / Fluent), tray icon, English and Vietnamese strings |
+| `src/Tb16p.App` | Previous WinForms app, kept until the WPF one has proven itself |
+| `src/Tb16p.Cli` | Command line tool for experiments (`tb16p info \| limits \| co \| battery`) |
+| `installer/` | Inno Setup script |
+| `vendor/WinRing0` | WinRing0 driver |
+
+## Technical notes (ThinkBook 16p G6 ADR)
+
+- Fn+Q modes go through Lenovo Dispatcher's ITS/DYTC (`HKLM\SYSTEM\CurrentControlSet\Services\LenovoProcessManagement\Performance\PowerSlider`, `ITS_CurrentSetting`: 0 = auto, 1 = eco, 3 = performance). The Dispatcher does **not** set PLx on AMD; the EC/firmware is what overwrites the limits.
+- The BIOS exposes Lenovo's GameZone WMI interface (`ACPI\PNP0C14\GMZN`) like the Legion line. Temperature and fan getters work; `SetSmartFanMode` / `Fan_Set_Table` have no effect, but setting a fan speed directly (feature `0x0403000x`, EC command 0xD1) does, and 0 hands the fans back to the EC.
+- Firmware power tables (Quiet / Balanced / Performance): sustained 55/70/80 W, peak 75/102/155 W, temperature limit 100 °C.
+- The stock EC fan curve runs in fixed steps (2100 → 3100 / 3400 / 3700 / 3900 rpm at 76 / 79 / 82 / 85 °C) and is much gentler than the BIOS fan tables suggest. See [docs/stock-fan-curve.md](docs/stock-fan-curve.md).
+- RyzenAdj 0.19 crashes on this machine (it cannot read the Dragon Range PM table), so the app implements the SMU mailbox protocol itself.
+
+## Support
+
+TB16P Tuner is free and open source. If it made your ThinkBook 16p quieter, cooler or last longer on battery, a coffee keeps the project going:
+
+- **PayPal:** [paypal.me/nmhthien](https://paypal.me/nmhthien)
+- **Bank transfer in Vietnam (VietQR, Vietcombank):**
+
+  <img src="assets/support/vietqr.png" alt="VietQR" width="220">
+
+## Credits
+
+- [Universal x86 Tuning Utility](https://github.com/JamesCJ60/Universal-x86-Tuning-Utility) (GPL-3.0): SMU mailbox addresses, Dragon Range commands and per-core Curve Optimizer encoding.
+- [RyzenAdj](https://github.com/FlyGoat/RyzenAdj) (LGPL-3.0): SMU mailbox protocol; the WinRing0 build.
+- [Lenovo Legion Toolkit](https://github.com/BartoszCichecki/LenovoLegionToolkit): battery charge mode IOCTL via `\\.\EnergyDrv`.
+- WinRing0 / OpenLibSys by hiyohiyo.
+- UI built with [WPF-UI](https://github.com/lepoco/wpfui) and [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet).
+
+Not affiliated with Lenovo. ThinkBook is a trademark of Lenovo.
+
+## License
+
+GPL-3.0, see [LICENSE](LICENSE).

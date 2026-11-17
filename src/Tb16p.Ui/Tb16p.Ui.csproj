@@ -38,8 +38,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\vendor\WinRing0\WinRing0x64.dll" Link="WinRing0x64.dll" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\vendor\WinRing0\WinRing0x64.sys" Link="WinRing0x64.sys" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The driver must stay a real file next to the exe, also in the single-file release. -->
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.dll" Link="WinRing0x64.dll" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.sys" Link="WinRing0x64.sys" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
 </Project>
