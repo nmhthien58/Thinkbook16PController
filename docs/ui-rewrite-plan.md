@@ -67,7 +67,16 @@ Trạng thái: **đã chốt, chưa bắt đầu** (2026-11-17).
 - VietQR (Vietcombank): `assets/support/vietqr.png`
 - PayPal: https://paypal.me/nmhthien (nút Donate của PayPal không mở cho tài khoản Việt Nam, dùng PayPal.Me)
 
-## Cần chủ dự án cung cấp
+## Tên app (đã chốt)
 
-- Quyết định tên app (giữ "Thinkbook16PController" hay đổi tên riêng, tránh thương hiệu Lenovo khi nhận donate).
+**TB16P Tuner**, mô tả: *Power, fan & battery tuner for Lenovo ThinkBook 16p*. Không dùng logo Lenovo, không dùng tiền tố "Think…".
+
+Đổi tên trong lúc làm giao diện mới:
+- Assembly / exe: `TB16PTuner.exe`; tên cửa sổ, khay, task khởi động `TB16P Tuner`.
+- Thư mục dữ liệu `C:\ProgramData\TB16PTuner` (tự chuyển `settings.json` từ `C:\ProgramData\Thinkbook16PController` nếu có).
+- Task khởi động: xóa task cũ `Thinkbook16PController`, tạo task mới.
+- Mutex single-instance, `app.manifest`, README, repo GitHub (đổi tên repo, GitHub tự chuyển hướng link cũ).
+
+## Còn mở
+
 - (Tùy chọn) icon app.
