@@ -10,19 +10,17 @@ Power limits, per-core Curve Optimizer, custom fan curves and battery charge mod
 
 ## Why
 
-- Fn+Q only offers Eco / Auto / Performance, and Performance pushes the CPU into the 90s °C.
-- Limits set with UXTU (RyzenAdj) are **silently overwritten by the EC** with the firmware's own table after a few minutes.
-- Unplugging the charger drops both the limits and Curve Optimizer.
-- Disconnecting the battery (e.g. when cleaning the laptop) turns Conservation mode off.
-- The fans cannot be tuned at all: Lenovo Legion Toolkit does not support this ThinkBook.
+**No software could control the fans on this laptop.** Lenovo ships no tuning app for this model, and third-party tools such as Lenovo Legion Toolkit do not support the ThinkBook. Fn+Q only switches between Eco / Auto / Performance, and the stock fan curve lets the CPU run hot.
+
+A fan-only tool would still have to run next to UXTU for power limits and Curve Optimizer, so TB16P Tuner does both in one app, and adds battery charge modes as well, so Lenovo Legion Toolkit is not needed just to keep Conservation mode on. One tray app instead of three.
 
 ## Features
 
 - **Profiles** with STAPM / Fast / Slow power limits, a CPU temperature limit and **per-core Curve Optimizer** (2 CCDs × 8 cores, one value per CCD or per core).
 - **Automatic profile switching** when the charger is plugged in or unplugged, and re-apply after resume from sleep.
-- **Defeats the EC override**: limits are re-sent every few seconds (2 s by default), Curve Optimizer every 30 s. The Dragon Range PM table cannot be read, so the app cannot detect the override and simply re-sends on a timer.
+- **Keeps the limits applied**: the EC silently restores its own power table after a few minutes, so limits are re-sent every few seconds (2 s by default) and Curve Optimizer every 30 s, like UXTU's re-apply. The Dragon Range PM table cannot be read, so the override cannot be detected and is simply re-sent on a timer.
 - **Custom fan curves** per profile: drag points freely (any temperature, not fixed steps), double-click to add, right-click to remove. Includes a **"Lenovo stock (measured)"** preset reconstructed from real EC behaviour ([how](docs/stock-fan-curve.md)), plus Quiet / Balanced / Cool. Safety: full speed from 95 °C, fans handed back to the EC on exit, pause, sleep or a crash.
-- **Battery charge mode**: Conservation / Normal / Rapid Charge, re-enabled automatically if something turns it off.
+- **Battery charge mode**: Conservation / Normal / Rapid Charge, re-enabled automatically if something turns it off (for example after the battery was disconnected while cleaning the laptop).
 - Live status: CPU and EC temperatures, both fan speeds, the active profile and errors.
 - Tray icon, start with Windows through Task Scheduler (admin rights without a UAC prompt on every boot), optional sensor log to CSV.
 
