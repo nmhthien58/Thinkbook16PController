@@ -18,9 +18,16 @@ public sealed class TuningEngine : IDisposable
     private static readonly TimeSpan ResumeDelay = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan ChargeModeCheck = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DriverRetry = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan FanResend = TimeSpan.FromSeconds(30);
+    private const int FanSensorFailureLimit = 3;
 
     private readonly object _gate = new();
     private readonly System.Threading.Timer _timer;
+    private readonly FanCurveRunner _fanRunner = new();
+    private GameZoneSensors? _gameZone;
+    private bool _fansPinned;
+    private int _fanSensorFailures;
+    private DateTime _nextFanResend;
 
     private WinRing0Access? _access;
     private CpuTuner? _tuner;
@@ -34,8 +41,17 @@ public sealed class TuningEngine : IDisposable
         Settings = settings;
         _fullApplyAt = DateTime.MinValue;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
-        _timer = new System.Threading.Timer(_ => OnTick(), null, TimeSpan.Zero, Tick);
+        SystemEvents.SessionEnding += OnSessionEnding;
+        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        _timer =new System.Threading.Timer(_ => OnTick(), null, TimeSpan.Zero, Tick);
     }
+
+    /// <summary>Speed the fans are pinned to, or null when the EC runs them.</summary>
+    public int? FanTargetRpm { get; private set; }
+
+    /// <summary>Temperature the fan curve last reacted to.</summary>
+    public int? FanControlTempC { get; private set; }
 
     public AppSettings Settings { get; private set; }
     public PowerLine PowerLine => _lastPowerLine;
@@ -81,7 +97,12 @@ public sealed class TuningEngine : IDisposable
     {
         lock (_gate)
         {
-            if (e.Mode == PowerModes.Resume)
+            if (e.Mode == PowerModes.Suspend)
+            {
+                // The app is frozen while asleep; never leave the fans pinned through that.
+                ReleaseFans("suspend");
+            }
+            else if (e.Mode == PowerModes.Resume)
             {
                 Log.Info("Resume from sleep");
                 _fullApplyAt = DateTime.Now + ResumeDelay;
@@ -119,6 +140,9 @@ public sealed class TuningEngine : IDisposable
                 _nextChargeCheck = now + ChargeModeCheck;
                 changed |= EnforceChargeMode();
             }
+
+            // Fans go through WMI, independent of the SMU driver, so they run even if WinRing0 fails.
+            changed |= FanStep(now);
 
             if (_paused || !EnsureDriver(now))
                 return;
@@ -185,6 +209,88 @@ public sealed class TuningEngine : IDisposable
         }
     }
 
+    /// <summary>
+    /// Runs the active profile's fan curve. The EC holds a pinned speed indefinitely, so
+    /// every path that stops following the curve must hand the fans back with speed 0.
+    /// </summary>
+    private bool FanStep(DateTime now)
+    {
+        var curve = _paused ? null : ActiveProfile?.FanCurve;
+        if (curve is null)
+            return _fansPinned && ReleaseFans("no fan curve");
+
+        _gameZone ??= GameZoneSensors.TryOpen();
+        if (_gameZone is null)
+            return SetError("Fan control: Lenovo GameZone WMI is not available.");
+
+        var temp = _gameZone.Read().FanControlTempC;
+        if (temp is null)
+        {
+            if (++_fanSensorFailures >= FanSensorFailureLimit && _fansPinned)
+            {
+                ReleaseFans("temperature unreadable");
+                return SetError("Fan control: cannot read the temperature, fans handed back to the EC.");
+            }
+            return false;
+        }
+        _fanSensorFailures = 0;
+
+        var target = _fanRunner.Next(curve, temp.Value);
+        var changed = target != FanTargetRpm || temp != FanControlTempC;
+        FanControlTempC = temp;
+        if (target == FanTargetRpm && now < _nextFanResend)
+            return changed;
+
+        if (!_gameZone.SetFanSpeed(target))
+            return SetError("Fan control: setting the fan speed failed.");
+
+        if (!_fansPinned)
+            Log.Info($"Fan curve active ({target} rpm at {temp} C)");
+        _fansPinned = true;
+        FanTargetRpm = target;
+        _nextFanResend = now + FanResend;
+        return true;
+    }
+
+    /// <summary>Gives the fans back to the EC. Caller holds <see cref="_gate"/> or is shutting down.</summary>
+    private bool ReleaseFans(string reason)
+    {
+        if (!_fansPinned)
+            return false;
+        var released = _gameZone?.ReleaseFans() ?? false;
+        Log.Info($"Fans handed back to the EC ({reason}){(released ? "" : " - FAILED")}");
+        _fansPinned = !released;
+        FanTargetRpm = null;
+        _fanRunner.Reset();
+        return true;
+    }
+
+    private void OnSessionEnding(object sender, SessionEndingEventArgs e)
+    {
+        lock (_gate)
+            ReleaseFans("session ending");
+    }
+
+    private void OnProcessExit(object? sender, EventArgs e)
+    {
+        lock (_gate)
+            ReleaseFans("process exit");
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        // The process is about to die; do not wait on the gate a stuck tick might hold.
+        if (Monitor.TryEnter(_gate, TimeSpan.FromSeconds(2)))
+        {
+            try { ReleaseFans("crash"); }
+            finally { Monitor.Exit(_gate); }
+        }
+        else
+        {
+            _gameZone?.ReleaseFans();
+        }
+    }
+
     private bool EnforceChargeMode()
     {
         if (Settings.ChargeMode is not { } wanted)
@@ -235,9 +341,14 @@ public sealed class TuningEngine : IDisposable
             if (_disposed)
                 return;
             _disposed = true;
+            ReleaseFans("exit");
         }
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionEnding -= OnSessionEnding;
+        AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+        AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
         _timer.Dispose();
         _access?.Dispose();
+        _gameZone?.Dispose();
     }
 }

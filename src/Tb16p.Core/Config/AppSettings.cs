@@ -19,6 +19,9 @@ public sealed class Profile
     public int?[]? CurveOptimizerCcd1 { get; set; }
     public int?[]? CurveOptimizerCcd2 { get; set; }
 
+    /// <summary>Custom fan curve; null leaves the fans to the EC (stock Lenovo behaviour).</summary>
+    public List<FanPoint>? FanCurve { get; set; }
+
     [JsonIgnore]
     public PowerLimits Limits => new(StapmW, FastW, SlowW, TctlC);
 
@@ -128,6 +131,8 @@ public sealed class AppSettings
             if (new[] { p.CurveOptimizerCcd1, p.CurveOptimizerCcd2 }.Where(a => a is not null).SelectMany(a => a!)
                 .Any(o => o is < CpuTuner.MinCurveOffset or > CpuTuner.MaxCurveOffset))
                 throw new InvalidDataException($"\"{p.Name}\": Curve Optimizer offsets must be {CpuTuner.MinCurveOffset}..{CpuTuner.MaxCurveOffset}.");
+            if (p.FanCurve is not null && Tuning.FanCurve.Validate(p.FanCurve) is { } fanError)
+                throw new InvalidDataException($"\"{p.Name}\": {fanError}");
         }
         if (Find(AcProfile) is null)
             throw new InvalidDataException($"acProfile \"{AcProfile}\" does not match any profile.");

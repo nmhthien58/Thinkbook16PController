@@ -25,6 +25,9 @@ public sealed class SettingsForm : Form
     private readonly OptionalNumber _tctl = new("Ngưỡng nhiệt CPU", "°C", CpuTuner.MinTctlC, CpuTuner.MaxTctlC, 95);
     private readonly OptionalNumber[] _ccd1 = CoreEditors();
     private readonly OptionalNumber[] _ccd2 = CoreEditors();
+    private readonly RadioButton _fanAuto = new() { Text = "Để EC tự quyết (đường cong gốc của Lenovo)", AutoSize = true, Checked = true };
+    private readonly RadioButton _fanCustom = new() { Text = "Đường cong tùy chỉnh", AutoSize = true, Margin = new Padding(16, 3, 3, 3) };
+    private readonly FanCurveEditor _fanEditor = new() { Enabled = false };
 
     private readonly ComboBox _acProfile = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
     private readonly ComboBox _batteryProfile = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
@@ -144,7 +147,6 @@ public sealed class SettingsForm : Form
         nameRow.Controls.Add(new Label { Text = "Tên profile", AutoSize = true, Margin = new Padding(3, 7, 8, 3) });
         nameRow.Controls.Add(_name);
         _name.TextChanged += (_, _) => RenameSelected();
-        panel.Controls.Add(nameRow);
 
         var limits = new GroupBox { Text = "Giới hạn điện (bỏ tích = để firmware tự quyết)", AutoSize = true, Padding = new Padding(8) };
         var limitsFlow = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, Dock = DockStyle.Fill };
@@ -182,7 +184,99 @@ public sealed class SettingsForm : Form
         co.Controls.Add(coLayout);
         panel.Controls.Add(co);
 
-        return panel;
+        var tabs = new TabControl { Dock = DockStyle.Fill };
+        var powerTab = new TabPage("Điện && Curve Optimizer") { UseVisualStyleBackColor = true };
+        powerTab.Controls.Add(panel);
+        var fanTab = new TabPage("Quạt") { UseVisualStyleBackColor = true };
+        fanTab.Controls.Add(BuildFanTab());
+        tabs.TabPages.Add(powerTab);
+        tabs.TabPages.Add(fanTab);
+
+        var profileEditor = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+        profileEditor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        profileEditor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        profileEditor.Controls.Add(nameRow, 0, 0);
+        profileEditor.Controls.Add(tabs, 0, 1);
+        return profileEditor;
+    }
+
+    private Control BuildFanTab()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 4, Padding = new Padding(6) };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        var mode = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
+        mode.Controls.Add(_fanAuto);
+        mode.Controls.Add(_fanCustom);
+        layout.Controls.Add(mode, 0, 0);
+
+        var presets = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
+        presets.Controls.Add(new Label { Text = "Mẫu:", AutoSize = true, Margin = new Padding(3, 7, 3, 3) });
+        presets.Controls.Add(SmallButton("Êm", () => ApplyFanPreset(FanCurve.Quiet())));
+        presets.Controls.Add(SmallButton("Cân bằng", () => ApplyFanPreset(FanCurve.Balanced())));
+        presets.Controls.Add(SmallButton("Mát", () => ApplyFanPreset(FanCurve.Cool())));
+        presets.Controls.Add(new Label { Width = 16 });
+        presets.Controls.Add(SmallButton("Chép sang mọi profile", CopyFanCurveToAll));
+        layout.Controls.Add(presets, 0, 1);
+
+        _fanEditor.Dock = DockStyle.Fill;
+        layout.Controls.Add(_fanEditor, 0, 2);
+
+        layout.Controls.Add(new Label
+        {
+            AutoSize = true,
+            ForeColor = SystemColors.GrayText,
+            Text = "Kéo điểm để chỉnh  •  Nhấp đúp vào chỗ trống để thêm điểm  •  Chuột phải vào điểm để xóa\n"
+                + $"Nhiệt độ điều khiển = cao nhất của CPU và CB5  •  Từ {FanCurve.EmergencyTempC} °C quạt chạy tối đa  •  "
+                + "Quạt chỉ giảm tốc khi nhiệt đã hạ 3 °C  •  Thoát / tạm dừng / sleep: quạt trả về cho EC",
+        }, 0, 3);
+
+        _fanAuto.CheckedChanged += (_, _) => OnFanModeChanged();
+        _fanEditor.CurveChanged += () =>
+        {
+            if (!_loading && SelectedProfile is { FanCurve: not null } p)
+            {
+                p.FanCurve = _fanEditor.GetPoints();
+                MarkDirty();
+            }
+        };
+        return layout;
+    }
+
+    private void OnFanModeChanged()
+    {
+        _fanEditor.Enabled = _fanCustom.Checked;
+        if (_loading || SelectedProfile is not { } p)
+            return;
+        p.FanCurve = _fanCustom.Checked ? _fanEditor.GetPoints() : null;
+        MarkDirty();
+    }
+
+    private void ApplyFanPreset(List<FanPoint> preset)
+    {
+        _fanEditor.SetPoints(preset);
+        if (!_fanCustom.Checked)
+            _fanCustom.Checked = true; // also stores the curve through OnFanModeChanged
+        else if (SelectedProfile is { } p)
+        {
+            p.FanCurve = _fanEditor.GetPoints();
+            MarkDirty();
+        }
+    }
+
+    private void CopyFanCurveToAll()
+    {
+        if (SelectedProfile is not { } source)
+            return;
+        var what = source.FanCurve is null ? "chế độ \"Để EC tự quyết\"" : "đường cong quạt này";
+        if (MessageBox.Show(this, $"Áp {what} cho tất cả profile?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+        foreach (var p in _draft.Profiles.Where(p => p != source))
+            p.FanCurve = source.FanCurve?.Select(point => point.Clone()).ToList();
+        MarkDirty();
     }
 
     private void AddCcdRow(TableLayoutPanel grid, int row, string label, OptionalNumber[] editors)
@@ -317,6 +411,11 @@ public sealed class SettingsForm : Form
                 _ccd1[core].Value = p?.CurveOptimizerCcd1?.ElementAtOrDefault(core);
                 _ccd2[core].Value = p?.CurveOptimizerCcd2?.ElementAtOrDefault(core);
             }
+            // Without a custom curve the editor still shows a starting point to switch to.
+            _fanEditor.SetPoints(p?.FanCurve ?? FanCurve.Balanced());
+            _fanCustom.Checked = p?.FanCurve is not null;
+            _fanAuto.Checked = p?.FanCurve is null;
+            _fanEditor.Enabled = _fanCustom.Checked;
         }
         finally
         {
@@ -401,6 +500,7 @@ public sealed class SettingsForm : Form
             TctlC = source.TctlC,
             CurveOptimizerCcd1 = (int?[]?)source.CurveOptimizerCcd1?.Clone(),
             CurveOptimizerCcd2 = (int?[]?)source.CurveOptimizerCcd2?.Clone(),
+            FanCurve = source.FanCurve?.Select(point => point.Clone()).ToList(),
         };
         _draft.Profiles.Add(copy);
         LoadDraftKeepingDirty(copy.Name);
@@ -501,7 +601,8 @@ public sealed class SettingsForm : Form
         var state = _engine.Paused ? "TẠM DỪNG"
             : _engine.LastError is { } error ? $"LỖI: {error}"
             : _engine.LastApplied is { } at ? $"áp lần cuối {at:HH:mm:ss}" : "đang khởi động";
-        _status.Text = $"{source}  •  {profile?.Name ?? "?"}  •  {state}";
+        var fan = _engine.FanTargetRpm is { } rpm ? $"quạt theo đường cong: {rpm} rpm" : "quạt: EC tự quyết";
+        _status.Text = $"{source}  •  {profile?.Name ?? "?"}  •  {state}  •  {fan}";
         _status.ForeColor = _engine.LastError is not null ? Color.Firebrick : SystemColors.ControlText;
     }
 
@@ -518,6 +619,7 @@ public sealed class SettingsForm : Form
         try
         {
             var r = await Task.Run(_gameZone.Read);
+            _fanEditor.SetLive(r.FanControlTempC, r.Fan1Rpm);
             _sensors.Text = $"  |  CPU {Show(r.CpuC, "°C")}  •  CB1 {Show(r.Sensor1C, "°C")}  •  CB5 {Show(r.Sensor5C, "°C")}"
                 + $"  •  Quạt 1 {Show(r.Fan1Rpm, " rpm")}  •  Quạt 2 {Show(r.Fan2Rpm, " rpm")}";
         }
