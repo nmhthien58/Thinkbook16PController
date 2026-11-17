@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>tb16p</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tb16p.Core\Tb16p.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.dll" Link="WinRing0x64.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.sys" Link="WinRing0x64.sys" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tb16p.App/Tb16p.App.csproj" />
+    <Project Path="src/Tb16p.Cli/Tb16p.Cli.csproj" />
+    <Project Path="src/Tb16p.Core/Tb16p.Core.csproj" />
+  </Folder>
+</Solution>

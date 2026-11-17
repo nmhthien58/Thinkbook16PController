@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+build/
+app/
+.vs/
+*.user
+
+# Test reports contain machine names and BIOS settings
+tests/**/*report*.txt
+
+# Local-only material: full RyzenAdj download and copied UXTU sources used as reference
+vendor/ryzenadj-*/
+vendor/*.zip
+reference/
