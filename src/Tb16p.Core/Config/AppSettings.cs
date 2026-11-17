@@ -42,6 +42,13 @@ public sealed class Profile
     }
 }
 
+public enum AppTheme
+{
+    System,
+    Light,
+    Dark,
+}
+
 public sealed class AppSettings
 {
     public List<Profile> Profiles { get; set; } = [];
@@ -64,10 +71,22 @@ public sealed class AppSettings
     /// <summary>How often Curve Optimizer is re-sent (it is also re-sent on every power or resume event).</summary>
     public int ReapplyCurveOptimizerSeconds { get; set; } = 30;
 
+    /// <summary>UI language: "en" (default) or "vi".</summary>
+    public string Language { get; set; } = "en";
+
+    /// <summary>Closing the window keeps the app running in the tray instead of exiting.</summary>
+    public bool CloseToTray { get; set; } = true;
+
+    public AppTheme Theme { get; set; } = AppTheme.System;
+
     public Profile? Find(string name) =>
         Profiles.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
 
     public static string Directory { get; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TB16PTuner");
+
+    /// <summary>Data folder used before the app was renamed to TB16P Tuner.</summary>
+    public static string LegacyDirectory { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Thinkbook16PController");
 
     public static string FilePath { get; } = Path.Combine(Directory, "settings.json");
@@ -86,6 +105,7 @@ public sealed class AppSettings
 
     public static AppSettings Load()
     {
+        MigrateLegacyFolder();
         if (!File.Exists(FilePath))
         {
             var defaults = CreateDefaults();
@@ -97,6 +117,19 @@ public sealed class AppSettings
             ?? throw new InvalidDataException("settings.json is empty.");
         settings.Validate();
         return settings;
+    }
+
+    /// <summary>
+    /// Carries settings.json over from the pre-rename folder the first time the renamed app
+    /// starts. The old folder is left in place (it also holds the old logs).
+    /// </summary>
+    private static void MigrateLegacyFolder()
+    {
+        var legacy = Path.Combine(LegacyDirectory, "settings.json");
+        if (File.Exists(FilePath) || !File.Exists(legacy))
+            return;
+        System.IO.Directory.CreateDirectory(Directory);
+        File.Copy(legacy, FilePath);
     }
 
     /// <summary>Deep copy, so an editor can change settings without touching the live ones.</summary>
@@ -138,6 +171,8 @@ public sealed class AppSettings
             throw new InvalidDataException($"acProfile \"{AcProfile}\" does not match any profile.");
         if (Find(BatteryProfile) is null)
             throw new InvalidDataException($"batteryProfile \"{BatteryProfile}\" does not match any profile.");
+        if (Language is not ("en" or "vi"))
+            Language = "en";
         ReapplyLimitsSeconds = Math.Clamp(ReapplyLimitsSeconds, 1, 60);
         ReapplyCurveOptimizerSeconds = Math.Clamp(ReapplyCurveOptimizerSeconds, 5, 600);
     }

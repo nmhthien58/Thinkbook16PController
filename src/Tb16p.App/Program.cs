@@ -1,3 +1,4 @@
+using Tb16p.Service;
 using Tb16p.Core.Config;
 
 namespace Tb16p.App;
@@ -5,12 +6,12 @@ namespace Tb16p.App;
 internal static class Program
 {
     /// <summary>Passed by the logon task so the app starts quietly in the tray.</summary>
-    public const string MinimizedArgument = "--minimized";
+    public const string MinimizedArgument = AppInfo.MinimizedArgument;
 
     [STAThread]
     private static void Main(string[] args)
     {
-        using var single = new Mutex(true, @"Global\Thinkbook16PController.SingleInstance", out var first);
+        using var single = new Mutex(true, AppInfo.SingleInstanceMutex, out var first);
         if (!first)
             return;
 

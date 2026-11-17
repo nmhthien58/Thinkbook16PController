@@ -1,6 +1,6 @@
 using Tb16p.Core.Config;
 
-namespace Tb16p.App;
+namespace Tb16p.Service;
 
 /// <summary>Small append-only log in the settings folder, reset when it grows past 1 MB.</summary>
 public static class Log

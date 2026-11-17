@@ -1,6 +1,12 @@
 # Kế hoạch: viết lại giao diện bằng WPF + WPF-UI (Fluent)
 
-Trạng thái: **đã chốt, chưa bắt đầu** (2026-11-17).
+Trạng thái: **bước 1–7 đã viết, build sạch, chờ thử trên máy** (2026-11-18).
+
+Khác với bản kế hoạch ban đầu:
+- `TuningEngine` / `SensorLogger` / `StartupTask` / `Log` tách ra thư viện chung `src/Tb16p.Service` để bản WinForms cũ vẫn build được trong lúc chuyển.
+- Chuỗi EN/VI nằm chung một file `src/Tb16p.Ui/Localization/Strings.cs` (mỗi khóa có cả hai ngôn ngữ cạnh nhau) thay vì hai file `.resx`, để không sót bản dịch.
+- Đường cong quạt là một `FrameworkElement` tự vẽ (`OnRender`) thay vì Canvas + Thumb, cùng luật kéo thả như bản cũ.
+- Thêm mẫu **Lenovo gốc (đo được)** từ nhật ký cảm biến, xem [stock-fan-curve.md](stock-fan-curve.md).
 
 ## Mục tiêu
 

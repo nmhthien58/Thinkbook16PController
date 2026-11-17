@@ -1,0 +1,117 @@
+<Page x:Class="Tb16p.Ui.Pages.GeneralPage"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:loc="clr-namespace:Tb16p.Ui.Localization">
+    <StackPanel Margin="24,4,24,24" MaxWidth="1100" HorizontalAlignment="Stretch">
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr General_Profiles_Title}" Margin="2,8,0,8" />
+        <ui:CardControl Margin="0,0,0,4">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="PlugConnected24" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr General_AcProfile}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr General_AcProfile_Desc}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="240" ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding AcProfile}" />
+        </ui:CardControl>
+        <ui:CardControl>
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="Battery524" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr General_BatteryProfile}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr General_BatteryProfile_Desc}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="240" ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding BatteryProfile}" />
+        </ui:CardControl>
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr General_Charge_Title}" />
+        <ItemsControl ItemsSource="{Binding ChargeOptions}" Margin="0,0,-8,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton Style="{StaticResource ChoiceCard}" GroupName="ChargeMode" IsChecked="{Binding IsSelected}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource CardDescription}" Text="{Binding Description}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </RadioButton>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Charge_Enforced}" Margin="2,0,0,0" />
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr General_Quick_Title}" />
+        <ui:CardControl Margin="0,0,0,4">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="ArrowSync24" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Action_Reapply}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Action_Reapply_Desc}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:Button Content="{loc:Tr Action_Reapply_Button}" Command="{Binding ReapplyCommand}" MinWidth="120" />
+        </ui:CardControl>
+        <ui:CardControl Margin="0,0,0,4">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="PauseCircle24" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Action_Pause}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Action_Pause_Desc}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch IsChecked="{Binding Paused}" />
+        </ui:CardControl>
+        <ui:CardControl>
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="WeatherSqualls24" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Action_FanMax}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{Binding FanMaxDescription}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch IsChecked="{Binding FanMax}" />
+        </ui:CardControl>
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr General_Active_Title}" />
+        <ui:Card Padding="20,16">
+            <StackPanel>
+                <TextBlock Text="{Binding ActiveProfileName}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <ItemsControl ItemsSource="{Binding Summary}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Label}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Value}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{loc:Tr Summary_Paused}" Margin="0,8,0,0"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Visibility="{Binding Paused, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </ui:Card>
+    </StackPanel>
+</Page>

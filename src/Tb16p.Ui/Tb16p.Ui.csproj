@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Only for the tray icon (NotifyIcon); everything else is WPF. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>TB16PTuner</AssemblyName>
+    <RootNamespace>Tb16p.Ui</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>x64</PlatformTarget>
+    <Version>1.0.0</Version>
+    <Product>TB16P Tuner</Product>
+    <Description>Power, fan &amp; battery tuner for Lenovo ThinkBook 16p</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is only used by name (System.Windows.Forms.NotifyIcon); keep its types out of the global namespace. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.0.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tb16p.Core\Tb16p.Core.csproj" />
+    <ProjectReference Include="..\Tb16p.Service\Tb16p.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\support\vietqr.png" Link="Assets\vietqr.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.dll" Link="WinRing0x64.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\vendor\WinRing0\WinRing0x64.sys" Link="WinRing0x64.sys" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

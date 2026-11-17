@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Security;
 using System.Security.Principal;
 
-namespace Tb16p.App;
+namespace Tb16p.Service;
 
 /// <summary>
 /// "Start with Windows" for an app that needs admin rights: a Task Scheduler entry that
@@ -12,9 +12,12 @@ namespace Tb16p.App;
 /// </summary>
 public static class StartupTask
 {
-    private const string TaskName = "Thinkbook16PController";
+    private const string TaskName = AppInfo.Name;
 
-    public static bool IsEnabled() => RunSchtasks($"/Query /TN \"{TaskName}\"") == 0;
+    /// <summary>Task created before the rename; replaced by the new one so boot does not start two copies.</summary>
+    private const string LegacyTaskName = "Thinkbook16PController";
+
+    public static bool IsEnabled() => Exists(TaskName);
 
     public static void Enable()
     {
@@ -49,14 +52,14 @@ public static class StartupTask
               <Actions Context="Author">
                 <Exec>
                   <Command>{SecurityElement.Escape(exe)}</Command>
-                  <Arguments>{Program.MinimizedArgument}</Arguments>
+                  <Arguments>{AppInfo.MinimizedArgument}</Arguments>
                   <WorkingDirectory>{SecurityElement.Escape(Path.GetDirectoryName(exe))}</WorkingDirectory>
                 </Exec>
               </Actions>
             </Task>
             """;
 
-        var xmlPath = Path.Combine(Path.GetTempPath(), $"{TaskName}.task.xml");
+        var xmlPath = Path.Combine(Path.GetTempPath(), "TB16PTuner.task.xml");
         File.WriteAllText(xmlPath, xml, System.Text.Encoding.Unicode);
         try
         {
@@ -68,15 +71,17 @@ public static class StartupTask
         {
             File.Delete(xmlPath);
         }
+        DeleteLegacy();
     }
 
     /// <summary>
     /// Rewrites an existing task so it points at the running exe, e.g. after the app moved
-    /// from a dev build folder to .\app. Does nothing when the task is not enabled.
+    /// from a dev build folder to .\app. A task left by the pre-rename app counts as enabled
+    /// and is replaced. Does nothing when neither exists.
     /// </summary>
     public static void RefreshIfEnabled()
     {
-        if (IsEnabled())
+        if (IsEnabled() || Exists(LegacyTaskName))
             Enable();
     }
 
@@ -85,7 +90,16 @@ public static class StartupTask
         var code = RunSchtasks($"/Delete /F /TN \"{TaskName}\"");
         if (code != 0)
             throw new InvalidOperationException($"schtasks /Delete failed with exit code {code}.");
+        DeleteLegacy();
     }
+
+    private static void DeleteLegacy()
+    {
+        if (Exists(LegacyTaskName))
+            RunSchtasks($"/Delete /F /TN \"{LegacyTaskName}\"");
+    }
+
+    private static bool Exists(string name) => RunSchtasks($"/Query /TN \"{name}\"") == 0;
 
     private static int RunSchtasks(string arguments)
     {

@@ -4,7 +4,7 @@ using Tb16p.Core.Hardware;
 using Tb16p.Core.Lenovo;
 using Tb16p.Core.Tuning;
 
-namespace Tb16p.App;
+namespace Tb16p.Service;
 
 /// <summary>
 /// Keeps the active profile applied. The EC silently restores its own power limits
@@ -20,6 +20,7 @@ public sealed class TuningEngine : IDisposable
     private static readonly TimeSpan DriverRetry = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan FanResend = TimeSpan.FromSeconds(30);
     private const int FanSensorFailureLimit = 3;
+    private const string SmuErrorPrefix = "SMU: ";
 
     private readonly object _gate = new();
     private readonly System.Threading.Timer _timer;
@@ -46,7 +47,7 @@ public sealed class TuningEngine : IDisposable
         SystemEvents.SessionEnding += OnSessionEnding;
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-        _timer =new System.Threading.Timer(_ => OnTick(), null, TimeSpan.Zero, Tick);
+        _timer = new System.Threading.Timer(_ => OnTick(), null, TimeSpan.Zero, Tick);
     }
 
     /// <summary>Speed the fans are pinned to, or null when the EC runs them.</summary>
@@ -69,6 +70,8 @@ public sealed class TuningEngine : IDisposable
     {
         lock (_gate)
         {
+            if (_paused == paused)
+                return;
             _paused = paused;
             Log.Info(paused ? "Paused" : "Resumed");
             if (!paused)
@@ -345,11 +348,19 @@ public sealed class TuningEngine : IDisposable
     {
         var failures = results.Where(r => !r.Ok).ToList();
         if (failures.Count > 0)
-            return SetError("SMU: " + string.Join(", ", failures));
+            return SetError(SmuErrorPrefix + string.Join(", ", failures));
 
         LastApplied = DateTime.Now;
         if (successMessage is null)
-            return false;
+        {
+            // A one-off SMU hiccup (busy, or another tool using the mailbox) is fixed by the next
+            // periodic re-send; do not leave its error on screen until the next full apply.
+            if (LastError?.StartsWith(SmuErrorPrefix, StringComparison.Ordinal) != true)
+                return false;
+            Log.Info("SMU writes succeed again");
+            LastError = null;
+            return true;
+        }
 
         Log.Info($"{successMessage}: {string.Join(", ", results)}");
         LastError = null;

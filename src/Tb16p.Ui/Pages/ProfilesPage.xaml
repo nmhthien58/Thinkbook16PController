@@ -1,0 +1,307 @@
+<Page x:Class="Tb16p.Ui.Pages.ProfilesPage"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:loc="clr-namespace:Tb16p.Ui.Localization"
+      xmlns:controls="clr-namespace:Tb16p.Ui.Controls"
+      x:Name="Root"
+      ScrollViewer.CanContentScroll="False">
+    <Page.Resources>
+        <!-- One power limit row: switch, label + description, number, unit. -->
+        <DataTemplate x:Key="LimitRow">
+            <Grid Margin="0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="36" />
+                </Grid.ColumnDefinitions>
+                <ui:ToggleSwitch IsChecked="{Binding IsSet}" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Label}" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{Binding Description}" />
+                </StackPanel>
+                <ui:NumberBox Grid.Column="2" Width="130" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                              SmallChange="1" LargeChange="5" MaxDecimalPlaces="0" ClearButtonEnabled="False"
+                              IsEnabled="{Binding IsSet}" Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Grid.Column="3" Text="{Binding Unit}" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- One Curve Optimizer core: tick + offset. -->
+        <DataTemplate x:Key="CoreCell">
+            <Border Margin="0,0,8,8" Padding="10,6,6,6" CornerRadius="6" BorderThickness="1"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                <!-- Caption is a separate text: the library CheckBox reserves a wide content margin that clipped it. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox IsChecked="{Binding IsSet}" MinWidth="0" Width="22" Padding="0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Caption}" Margin="6,0,6,0" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Caption}" />
+                    <ui:NumberBox Grid.Column="2" Width="56" Padding="4,6" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" SmallChange="1" MaxDecimalPlaces="0"
+                                  SpinButtonPlacementMode="Hidden" ClearButtonEnabled="False" TextAlignment="Center"
+                                  IsEnabled="{Binding IsSet}" Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Tabs drawn as framed segment buttons: plain-text tab headers do not read as clickable. -->
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Chip" Margin="0,0,8,0" Padding="18,8" CornerRadius="6" BorderThickness="1"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <ContentPresenter x:Name="Text" ContentSource="Header" TextElement.FontWeight="SemiBold"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                <Setter TargetName="Text" Property="TextElement.Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TabPanel IsItemsHost="True" Margin="0,0,0,4" />
+                            <ContentPresenter Grid.Row="1" ContentSource="SelectedContent" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ItemsPanelTemplate x:Key="CoreColumns">
+            <UniformGrid Columns="4" />
+        </ItemsPanelTemplate>
+    </Page.Resources>
+
+    <Grid Margin="24,4,24,20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Profile list -->
+        <ui:Card Grid.Column="0" Padding="8" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Cursor" Value="Hand" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Grid Margin="0,0,0,2">
+                                            <Border x:Name="Back" CornerRadius="6" Background="Transparent" Padding="12,6" />
+                                            <Border x:Name="Bar" Width="3" Height="18" CornerRadius="2" HorizontalAlignment="Left"
+                                                    Background="{DynamicResource SystemAccentColorPrimaryBrush}" Visibility="Collapsed" />
+                                            <ContentPresenter Margin="12,6" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Back" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Back" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                                <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="2,4">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Usage}" FontSize="11" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                           Visibility="{Binding Usage, Converter={StaticResource TextToVisibility}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <UniformGrid Grid.Row="1" Columns="3" Margin="0,8,0,0">
+                    <ui:Button Command="{Binding AddCommand}" ToolTip="{loc:Tr Profiles_Add}" HorizontalAlignment="Stretch" Margin="0,0,4,0"
+                               Icon="{ui:SymbolIcon Add24}" />
+                    <ui:Button Command="{Binding DuplicateCommand}" ToolTip="{loc:Tr Profiles_Duplicate}" HorizontalAlignment="Stretch" Margin="2,0"
+                               Icon="{ui:SymbolIcon Copy24}" />
+                    <ui:Button Command="{Binding DeleteCommand}" ToolTip="{loc:Tr Profiles_Delete}" HorizontalAlignment="Stretch" Margin="4,0,0,0"
+                               Icon="{ui:SymbolIcon Delete24}" />
+                </UniformGrid>
+            </Grid>
+        </ui:Card>
+
+        <!-- Editor for the selected profile -->
+        <Grid Grid.Column="2" DataContext="{Binding Selected}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="{loc:Tr Profiles_Name}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <ui:TextBox Width="300" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" ClearButtonEnabled="False" />
+            </StackPanel>
+
+            <TabControl Grid.Row="1">
+                <!-- Power & Curve Optimizer -->
+                <TabItem Header="{loc:Tr Tab_Power}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,8,12,0">
+                        <StackPanel>
+                            <ui:Card Padding="20,12" Margin="0,4,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Power_Title}" FontWeight="SemiBold" FontSize="15" Margin="0,4,0,2" />
+                                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Power_Hint}" Margin="0,0,0,6" />
+                                    <ContentControl Content="{Binding Stapm}" ContentTemplate="{StaticResource LimitRow}" />
+                                    <ContentControl Content="{Binding Fast}" ContentTemplate="{StaticResource LimitRow}" />
+                                    <ContentControl Content="{Binding Slow}" ContentTemplate="{StaticResource LimitRow}" />
+                                    <ContentControl Content="{Binding Tctl}" ContentTemplate="{StaticResource LimitRow}" />
+                                </StackPanel>
+                            </ui:Card>
+
+                            <ui:Card Padding="20,12" Margin="0,10,0,4">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Co_Title}" FontWeight="SemiBold" FontSize="15" Margin="0,4,0,2" />
+                                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Co_Hint}" Margin="0,0,0,10" />
+                                    <!-- One block per CCD: either one value for all eight cores, or each core. -->
+                                    <ItemsControl ItemsSource="{Binding Ccds}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="0,10" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+                                                            <ui:ToggleSwitch HorizontalAlignment="Right" Content="{loc:Tr Co_AllCores}" IsChecked="{Binding UseAll}" />
+                                                        </Grid>
+
+                                                        <!-- All cores: one cell, the width of a per-core column. -->
+                                                        <UniformGrid Columns="2" Margin="0,10,0,0"
+                                                                     Visibility="{Binding UseAll, Converter={StaticResource BoolToVisibility}}">
+                                                            <ContentControl Content="{Binding All}" ContentTemplate="{StaticResource CoreCell}" />
+                                                        </UniformGrid>
+
+                                                        <!-- Per core -->
+                                                        <ItemsControl Margin="0,10,0,0" ItemsPanel="{StaticResource CoreColumns}"
+                                                                      ItemsSource="{Binding Cores}" ItemTemplate="{StaticResource CoreCell}"
+                                                                      Visibility="{Binding UseAll, Converter={StaticResource BoolToVisibility}, ConverterParameter=Invert}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <ui:Button Content="{loc:Tr Co_Clear}" Margin="0,4,0,4" Icon="{ui:SymbolIcon Eraser24}"
+                                               Command="{Binding DataContext.ClearCurveOptimizerCommand, ElementName=Root}" />
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- Fan -->
+                <TabItem Header="{loc:Tr Tab_Fan}">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="{loc:Tr Fan_Mode_Ec}" GroupName="FanMode" Margin="0,0,24,0"
+                                         IsChecked="{Binding FanCustom, Converter={StaticResource InverseBool}}" />
+                            <RadioButton Content="{loc:Tr Fan_Mode_Custom}" GroupName="FanMode" IsChecked="{Binding FanCustom}" />
+                        </StackPanel>
+
+                        <Grid Grid.Row="1" Margin="0,10,0,8" DataContext="{Binding DataContext, ElementName=Root}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <WrapPanel VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr Fan_Presets}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <ui:Button Content="{loc:Tr Preset_Stock}" ToolTip="{loc:Tr Preset_Stock_Tip}" Command="{Binding ApplyPresetCommand}" CommandParameter="Stock" Margin="0,0,6,4" />
+                                <ui:Button Content="{loc:Tr Preset_Quiet}" Command="{Binding ApplyPresetCommand}" CommandParameter="Quiet" Margin="0,0,6,4" />
+                                <ui:Button Content="{loc:Tr Preset_Balanced}" Command="{Binding ApplyPresetCommand}" CommandParameter="Balanced" Margin="0,0,6,4" />
+                                <ui:Button Content="{loc:Tr Preset_Cool}" Command="{Binding ApplyPresetCommand}" CommandParameter="Cool" Margin="0,0,18,4" />
+                                <ui:Button Content="{loc:Tr Fan_CopyAll}" Command="{Binding CopyFanToAllCommand}" Icon="{ui:SymbolIcon CopyArrowRight24}" Margin="0,0,6,4" />
+                            </WrapPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr Action_FanMax}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <ui:ToggleSwitch IsChecked="{Binding FanMax, Mode=OneWay}" Command="{Binding ToggleFanMaxCommand}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Grid.Row="2" CornerRadius="8" Padding="8,10,8,4"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <controls:FanCurveChart Points="{Binding FanPoints, Mode=TwoWay}"
+                                                    IsEnabled="{Binding FanCustom}"
+                                                    MaxOverride="{Binding DataContext.FanMax, ElementName=Root}"
+                                                    LiveTempC="{Binding DataContext.LiveTempC, ElementName=Root}"
+                                                    LiveRpm="{Binding DataContext.LiveRpm, ElementName=Root}" />
+                        </Border>
+
+                        <TextBlock Grid.Row="3" Style="{StaticResource CardDescription}" Margin="2,8,0,0"
+                                   Text="{Binding DataContext.FanHint, ElementName=Root}" />
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <!-- Save bar -->
+            <Grid Grid.Row="2" Margin="0,12,0,0" DataContext="{Binding DataContext, ElementName=Root}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibility}}">
+                    <ui:SymbolIcon Symbol="Edit24" Margin="0,0,6,0" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                    <TextBlock Text="{loc:Tr Profiles_Unsaved}" Foreground="{DynamicResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button Content="{loc:Tr Profiles_Revert}" Command="{Binding RevertCommand}" Margin="0,0,8,0" MinWidth="130" />
+                    <ui:Button Content="{loc:Tr Profiles_Save}" Command="{Binding SaveCommand}" Appearance="Primary" MinWidth="150"
+                               Icon="{ui:SymbolIcon Save24}" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

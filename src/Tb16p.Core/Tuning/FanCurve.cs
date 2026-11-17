@@ -48,21 +48,30 @@ public static class FanCurve
     public static string? Validate(IReadOnlyList<FanPoint> points)
     {
         if (points.Count is < MinPoints or > MaxPoints)
-            return $"Đường cong quạt cần {MinPoints}-{MaxPoints} điểm.";
+            return $"A fan curve needs {MinPoints}-{MaxPoints} points.";
         for (var i = 0; i < points.Count; i++)
         {
             var p = points[i];
             if (p.TempC is < MinTempC or > MaxTempC)
-                return $"Nhiệt độ phải trong {MinTempC}-{MaxTempC} °C.";
+                return $"Temperatures must be {MinTempC}-{MaxTempC} °C.";
             if (p.Rpm is < MinRpm or > MaxRpm)
-                return $"Tốc độ quạt phải trong {MinRpm}-{MaxRpm} rpm.";
+                return $"Fan speeds must be {MinRpm}-{MaxRpm} rpm.";
             if (i > 0 && p.TempC <= points[i - 1].TempC)
-                return "Các điểm phải có nhiệt độ tăng dần.";
+                return "Fan curve temperatures must increase.";
             if (i > 0 && p.Rpm < points[i - 1].Rpm)
-                return "Tốc độ quạt không được giảm khi nhiệt độ tăng.";
+                return "Fan speed must not drop as the temperature rises.";
         }
         return null;
     }
+
+    /// <summary>
+    /// What the EC really runs, measured from ~12,000 sensor log samples (2026-11-17, AC,
+    /// Fn+Q performance, 56-89 °C CPU): fixed steps that rise at 76/79/82/85 °C and drop
+    /// about 3 °C lower. Much gentler than the BIOS fan tables. Nothing was seen below
+    /// 2100 rpm or above 89 °C; the last segment just ramps into the emergency limit.
+    /// </summary>
+    public static List<FanPoint> LenovoStock() =>
+        [new(72, 2100), new(76, 3100), new(79, 3400), new(82, 3700), new(85, 3900), new(89, 3900), new(95, 5500)];
 
     public static List<FanPoint> Quiet() =>
         [new(50, 1600), new(60, 2000), new(70, 2600), new(80, 3400), new(88, 4500), new(95, 5500)];

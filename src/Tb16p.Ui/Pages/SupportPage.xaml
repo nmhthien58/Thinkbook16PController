@@ -1,0 +1,91 @@
+<Page x:Class="Tb16p.Ui.Pages.SupportPage"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:loc="clr-namespace:Tb16p.Ui.Localization">
+    <StackPanel Margin="24,4,24,24" MaxWidth="1100">
+
+        <ui:Card Padding="24,20" Margin="0,8,0,0">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Heart24" Filled="True" FontSize="26" Margin="0,0,10,0"
+                                   Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                    <TextBlock Text="{loc:Tr Support_Title}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{loc:Tr Support_Intro}" TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="760" HorizontalAlignment="Left" />
+            </StackPanel>
+        </ui:Card>
+
+        <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ui:Card Grid.Column="0" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Support_VietQr}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Support_VietQr_Desc}" Margin="0,2,0,12" />
+                    <Border Background="White" CornerRadius="8" Padding="10" HorizontalAlignment="Left">
+                        <Image Source="/Assets/vietqr.png" Width="240" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Border>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Grid.Column="2" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Support_PayPal}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Support_PayPal_Desc}" Margin="0,2,0,12" />
+                    <ui:Button Appearance="Primary" Click="OnPayPal" HorizontalAlignment="Left" Padding="16,8">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Payment24" Margin="0,0,8,0" />
+                            <TextBlock Text="{loc:Tr Support_PayPal_Button}" />
+                        </StackPanel>
+                    </ui:Button>
+                </StackPanel>
+            </ui:Card>
+        </Grid>
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr Support_Credits}" />
+        <ui:Card Padding="20,14">
+            <StackPanel>
+                <StackPanel.Resources>
+                    <Style x:Key="CreditName" TargetType="TextBlock">
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="Margin" Value="0,6,0,0" />
+                    </Style>
+                </StackPanel.Resources>
+                <TextBlock Style="{StaticResource CreditName}" Text="Universal x86 Tuning Utility (GPL-3.0)" Margin="0" />
+                <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Credit_Uxtu}" />
+                <TextBlock Style="{StaticResource CreditName}" Text="RyzenAdj (LGPL-3.0)" />
+                <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Credit_RyzenAdj}" />
+                <TextBlock Style="{StaticResource CreditName}" Text="Lenovo Legion Toolkit" />
+                <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Credit_Llt}" />
+                <TextBlock Style="{StaticResource CreditName}" Text="WinRing0 / OpenLibSys (hiyohiyo)" />
+                <TextBlock Style="{StaticResource CardDescription}" Text="{loc:Tr Credit_WinRing0}" />
+            </StackPanel>
+        </ui:Card>
+
+        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr Support_About}" />
+        <ui:CardControl Margin="0,0,0,4">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="Info24" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <TextBlock x:Name="NameText" Text="TB16P Tuner" FontWeight="SemiBold" />
+                    <TextBlock x:Name="VersionText" Style="{StaticResource CardDescription}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:Button Click="OnGitHub">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Code24" Margin="0,0,8,0" />
+                    <TextBlock Text="{loc:Tr About_Source}" />
+                </StackPanel>
+            </ui:Button>
+        </ui:CardControl>
+        <ui:InfoBar IsOpen="True" IsClosable="False" Severity="Warning" Message="{loc:Tr About_Disclaimer}" />
+    </StackPanel>
+</Page>

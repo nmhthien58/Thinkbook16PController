@@ -4,7 +4,7 @@ using Tb16p.Core.Config;
 using Tb16p.Core.Hardware;
 using Tb16p.Core.Lenovo;
 
-namespace Tb16p.App;
+namespace Tb16p.Service;
 
 /// <summary>
 /// Appends a CSV row every two seconds with the EC temperatures, fan speeds and the state
