@@ -41,7 +41,10 @@ public sealed class TrayApp : ApplicationContext
         var text = $"Thinkbook16PController\n{state} ({source})";
         _tray.Text = text.Length > 127 ? text[..127] : text;
 
-        var color = _engine.Paused ? Color.Gray : _engine.LastError is not null ? Color.Firebrick : Color.SeaGreen;
+        var color = _engine.Paused ? Color.Gray
+            : _engine.LastError is not null ? Color.Firebrick
+            : _engine.FanMax ? Color.DarkOrange
+            : Color.SeaGreen;
         var label = profile?.SlowW?.ToString() ?? "L";
         SetIcon(DrawIcon(label, color));
     }
@@ -70,6 +73,7 @@ public sealed class TrayApp : ApplicationContext
 
         menu.Items.Add("Áp lại ngay", null, (_, _) => _engine.RequestFullApply());
         menu.Items.Add(new ToolStripMenuItem("Tạm dừng", null, (_, _) => _engine.SetPaused(!_engine.Paused)) { Checked = _engine.Paused });
+        menu.Items.Add(new ToolStripMenuItem("Quạt tối đa (thử)", null, (_, _) => _engine.SetFanMax(!_engine.FanMax)) { Checked = _engine.FanMax });
         menu.Items.Add(StartupMenuItem());
         menu.Items.Add(new ToolStripMenuItem("Ghi nhật ký cảm biến", null, (_, _) =>
         {

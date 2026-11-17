@@ -45,6 +45,23 @@ internal sealed class FanCurveEditor : Control
         Invalidate();
     }
 
+    /// <summary>When set, the chart shows the fans locked at full speed and ignores edits.</summary>
+    public bool MaxOverride
+    {
+        get => _maxOverride;
+        set
+        {
+            if (_maxOverride == value)
+                return;
+            _maxOverride = value;
+            _dragIndex = _hoverIndex = -1;
+            Invalidate();
+        }
+    }
+
+    private bool _maxOverride;
+    private bool Editable => Enabled && !_maxOverride;
+
     /// <summary>Current temperature and fan speed, drawn as a live marker.</summary>
     public void SetLive(int? tempC, int? rpm)
     {
@@ -88,7 +105,7 @@ internal sealed class FanCurveEditor : Control
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
-        if (!Enabled)
+        if (!Editable)
             return;
         Focus();
         var index = HitTest(e.Location);
@@ -109,7 +126,7 @@ internal sealed class FanCurveEditor : Control
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         base.OnMouseDoubleClick(e);
-        if (!Enabled || e.Button != MouseButtons.Left || HitTest(e.Location) >= 0 || _points.Count >= FanCurve.MaxPoints)
+        if (!Editable || e.Button != MouseButtons.Left || HitTest(e.Location) >= 0 || _points.Count >= FanCurve.MaxPoints)
             return;
 
         var temp = Math.Clamp(TempAt(e.X), FanCurve.MinTempC, FanCurve.MaxTempC);
@@ -136,7 +153,7 @@ internal sealed class FanCurveEditor : Control
             return;
         }
 
-        var hover = Enabled ? HitTest(e.Location) : -1;
+        var hover = Editable ? HitTest(e.Location) : -1;
         Cursor = hover >= 0 ? Cursors.Hand : Cursors.Cross;
         if (hover != _hoverIndex)
         {
@@ -223,6 +240,9 @@ internal sealed class FanCurveEditor : Control
         if (_points.Count > 0)
             DrawCurve(g, plot, dim);
 
+        if (_maxOverride)
+            DrawMaxOverride(g, plot);
+
         DrawLiveMarker(g, plot, smallFont);
     }
 
@@ -268,6 +288,25 @@ internal sealed class FanCurveEditor : Control
             g.FillRectangle(back, x - 3, y - 1, size.Width + 6, size.Height + 2);
             g.DrawString(text, font, activeBrush, x, y);
         }
+    }
+
+    private void DrawMaxOverride(Graphics g, Rectangle plot)
+    {
+        var y = Y(FanCurve.MaxRpm);
+        using (var fill = new SolidBrush(Color.FromArgb(45, 220, 40, 40)))
+            g.FillRectangle(fill, plot.Left, y, plot.Width, plot.Bottom - y);
+        using (var pen = new Pen(Color.FromArgb(220, 40, 40), 3f))
+            g.DrawLine(pen, plot.Left, y, plot.Right, y);
+
+        var text = $"QUẠT TỐI ĐA ({FanCurve.MaxRpm} rpm) - đường cong tạm khóa";
+        using var font = new Font(Font.FontFamily, 11f, FontStyle.Bold);
+        var size = g.MeasureString(text, font);
+        var x = plot.Left + (plot.Width - size.Width) / 2;
+        var ty = y + (plot.Bottom - y - size.Height) / 2;
+        using var back = new SolidBrush(Color.FromArgb(230, 255, 255, 255));
+        g.FillRectangle(back, x - 6, ty - 3, size.Width + 12, size.Height + 6);
+        using var brush = new SolidBrush(Color.FromArgb(200, 30, 30));
+        g.DrawString(text, font, brush, x, ty);
     }
 
     private void DrawLiveMarker(Graphics g, Rectangle plot, Font font)

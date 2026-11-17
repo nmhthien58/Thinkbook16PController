@@ -28,6 +28,13 @@ public sealed class SettingsForm : Form
     private readonly RadioButton _fanAuto = new() { Text = "Để EC tự quyết (đường cong gốc của Lenovo)", AutoSize = true, Checked = true };
     private readonly RadioButton _fanCustom = new() { Text = "Đường cong tùy chỉnh", AutoSize = true, Margin = new Padding(16, 3, 3, 3) };
     private readonly FanCurveEditor _fanEditor = new() { Enabled = false };
+    private readonly CheckBox _fanMax = new()
+    {
+        Text = "Quạt tối đa (thử)",
+        Appearance = Appearance.Button,
+        AutoSize = true,
+        Padding = new Padding(8, 0, 8, 0),
+    };
 
     private readonly ComboBox _acProfile = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
     private readonly ComboBox _batteryProfile = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
@@ -220,6 +227,15 @@ public sealed class SettingsForm : Form
         presets.Controls.Add(SmallButton("Mát", () => ApplyFanPreset(FanCurve.Cool())));
         presets.Controls.Add(new Label { Width = 16 });
         presets.Controls.Add(SmallButton("Chép sang mọi profile", CopyFanCurveToAll));
+        presets.Controls.Add(new Label { Width = 16 });
+        presets.Controls.Add(_fanMax);
+        // Applies immediately and is not part of the saved settings.
+        _fanMax.CheckedChanged += (_, _) =>
+        {
+            if (_fanMax.Checked != _engine.FanMax)
+                _engine.SetFanMax(_fanMax.Checked);
+            ShowFanMax();
+        };
         layout.Controls.Add(presets, 0, 1);
 
         _fanEditor.Dock = DockStyle.Fill;
@@ -244,6 +260,16 @@ public sealed class SettingsForm : Form
             }
         };
         return layout;
+    }
+
+    /// <summary>Mirrors the engine's max-fan switch, which the tray menu can also flip.</summary>
+    private void ShowFanMax()
+    {
+        if (_fanMax.Checked != _engine.FanMax)
+            _fanMax.Checked = _engine.FanMax;
+        _fanMax.BackColor = _engine.FanMax ? Color.Firebrick : SystemColors.Control;
+        _fanMax.ForeColor = _engine.FanMax ? Color.White : SystemColors.ControlText;
+        _fanEditor.MaxOverride = _engine.FanMax;
     }
 
     private void OnFanModeChanged()
@@ -601,7 +627,10 @@ public sealed class SettingsForm : Form
         var state = _engine.Paused ? "TẠM DỪNG"
             : _engine.LastError is { } error ? $"LỖI: {error}"
             : _engine.LastApplied is { } at ? $"áp lần cuối {at:HH:mm:ss}" : "đang khởi động";
-        var fan = _engine.FanTargetRpm is { } rpm ? $"quạt theo đường cong: {rpm} rpm" : "quạt: EC tự quyết";
+        var fan = _engine.FanMax && !_engine.Paused ? $"quạt: TỐI ĐA ({FanCurve.MaxRpm} rpm)"
+            : _engine.FanTargetRpm is { } rpm ? $"quạt theo đường cong: {rpm} rpm"
+            : "quạt: EC tự quyết";
+        ShowFanMax();
         _status.Text = $"{source}  •  {profile?.Name ?? "?"}  •  {state}  •  {fan}";
         _status.ForeColor = _engine.LastError is not null ? Color.Firebrick : SystemColors.ControlText;
     }

@@ -26,6 +26,8 @@ public sealed class TuningEngine : IDisposable
     private readonly FanCurveRunner _fanRunner = new();
     private GameZoneSensors? _gameZone;
     private bool _fansPinned;
+    private bool _fanMax;
+    private string? _fanSource;
     private int _fanSensorFailures;
     private DateTime _nextFanResend;
 
@@ -216,7 +218,8 @@ public sealed class TuningEngine : IDisposable
     private bool FanStep(DateTime now)
     {
         var curve = _paused ? null : ActiveProfile?.FanCurve;
-        if (curve is null)
+        var max = _fanMax && !_paused;
+        if (curve is null && !max)
             return _fansPinned && ReleaseFans("no fan curve");
 
         _gameZone ??= GameZoneSensors.TryOpen();
@@ -224,6 +227,9 @@ public sealed class TuningEngine : IDisposable
             return SetError("Fan control: Lenovo GameZone WMI is not available.");
 
         var temp = _gameZone.Read().FanControlTempC;
+        if (max)
+            return PinFans(now, FanCurve.MaxRpm, temp, "Max fan");
+
         if (temp is null)
         {
             if (++_fanSensorFailures >= FanSensorFailureLimit && _fansPinned)
@@ -235,21 +241,45 @@ public sealed class TuningEngine : IDisposable
         }
         _fanSensorFailures = 0;
 
-        var target = _fanRunner.Next(curve, temp.Value);
+        return PinFans(now, _fanRunner.Next(curve!, temp.Value), temp, "Fan curve");
+    }
+
+    private bool PinFans(DateTime now, int target, int? temp, string source)
+    {
         var changed = target != FanTargetRpm || temp != FanControlTempC;
         FanControlTempC = temp;
         if (target == FanTargetRpm && now < _nextFanResend)
             return changed;
 
-        if (!_gameZone.SetFanSpeed(target))
+        if (!_gameZone!.SetFanSpeed(target))
             return SetError("Fan control: setting the fan speed failed.");
 
-        if (!_fansPinned)
-            Log.Info($"Fan curve active ({target} rpm at {temp} C)");
+        if (!_fansPinned || source != _fanSource)
+            Log.Info($"{source} active ({target} rpm at {temp} C)");
+        _fanSource = source;
         _fansPinned = true;
         FanTargetRpm = target;
         _nextFanResend = now + FanResend;
         return true;
+    }
+
+    /// <summary>Test switch: both fans flat out regardless of the profile. Not saved.</summary>
+    public bool FanMax => _fanMax;
+
+    public void SetFanMax(bool on)
+    {
+        lock (_gate)
+        {
+            if (_fanMax == on)
+                return;
+            _fanMax = on;
+            Log.Info($"Max fan {(on ? "ON" : "OFF")}");
+            // Start the curve from scratch, and resend at once rather than in up to 30 s.
+            _fanRunner.Reset();
+            FanTargetRpm = null;
+            _nextFanResend = DateTime.MinValue;
+        }
+        StateChanged?.Invoke();
     }
 
     /// <summary>Gives the fans back to the EC. Caller holds <see cref="_gate"/> or is shutting down.</summary>
@@ -260,6 +290,7 @@ public sealed class TuningEngine : IDisposable
         var released = _gameZone?.ReleaseFans() ?? false;
         Log.Info($"Fans handed back to the EC ({reason}){(released ? "" : " - FAILED")}");
         _fansPinned = !released;
+        _fanSource = null;
         FanTargetRpm = null;
         _fanRunner.Reset();
         return true;
